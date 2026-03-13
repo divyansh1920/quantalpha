@@ -1,3 +1,4 @@
+import MetricInterpreter from '../components/MetricInterpreter';
 import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -504,6 +505,21 @@ export default function Analysis() {
             />
           </div>
         </div>
+        
+        {/* ── Metric Interpreter ── */}
+        {ratios?.[0] && cashFlows?.[0] && (
+          <MetricInterpreter
+            metrics={{
+              priceEarningsRatio: r0.priceEarningsRatio,
+              priceToBookRatio:   r0.priceToBookRatio,
+              returnOnEquity:     r0.returnOnEquity,
+              netProfitMargin:    r0.netProfitMargin,
+              debtEquityRatio:    r0.debtEquityRatio,
+              currentRatio:       r0.currentRatio,
+              freeCashFlow:       cf0.freeCashFlow,
+            }}
+          />
+        )}
 
         {/* ══════════════════════════════════════════════════════
             SECTION 4 — PRICE CHART
