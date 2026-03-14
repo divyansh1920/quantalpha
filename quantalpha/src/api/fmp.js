@@ -39,7 +39,17 @@ export const getQuote = async (ticker) => {
   const data = await get('/quote', { symbol: ticker });
   const arr  = toArray(data);
   if (!arr.length) throw new Error(`No live quote available for "${ticker}".`);
-  return arr[0];
+  const q = arr[0];
+  // Normalize field names — FMP sometimes uses different names
+  return {
+    ...q,
+    price:             q.price ?? q.currentPrice ?? 0,
+    changesPercentage: q.changesPercentage ?? q.changePercent ?? 0,
+    marketCap:         q.marketCap ?? q.mktCap ?? 0,
+    yearHigh:          q.yearHigh ?? q.fiftyTwoWeekHigh ?? null,
+    yearLow:           q.yearLow  ?? q.fiftyTwoWeekLow  ?? null,
+    pe:                q.pe ?? q.priceEarningsRatio ?? null,
+  };
 };
 
 export const getIncomeStatement = async (ticker, limit = 5) => {
