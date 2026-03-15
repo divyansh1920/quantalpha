@@ -10,17 +10,20 @@ client.interceptors.response.use(
   (err) => {
     const status = err.response?.status;
     if (status === 401 || status === 403)
-      throw new Error('Invalid FMP API key. Please check your .env file.');
+      throw new Error('Invalid FMP API key. Check your .env file.');
+    if (status === 402)
+      throw new Error('PAID_ENDPOINT');
     if (status === 429)
       throw new Error('FMP rate limit reached. Please wait and try again.');
-    throw new Error(err.message || 'Network error. Check your connection.');
+    if (status === 404)
+      return Promise.resolve({ data: [] });
+    throw new Error(err.message || 'Network error.');
   }
 );
 
 const get = (path, params = {}) =>
   client.get(path, { params: { ...params, apikey: API_KEY } }).then((r) => r.data);
 
-/* ── Normalize: new API returns object OR array depending on endpoint ── */
 const toArray = (data) => {
   if (!data) return [];
   if (Array.isArray(data)) return data;
@@ -29,62 +32,76 @@ const toArray = (data) => {
 };
 
 export const getCompanyProfile = async (ticker) => {
-  const data = await get('/profile', { symbol: ticker });
-  const arr  = toArray(data);
-  if (!arr.length) throw new Error(`Ticker "${ticker}" not found. Please verify the symbol.`);
-  return arr[0];
+  try {
+    const data = await get('/profile', { symbol: ticker });
+    const arr  = toArray(data);
+    if (!arr.length) throw new Error(`Ticker "${ticker}" not found.`);
+    return arr[0];
+  } catch (e) {
+    if (e.message === 'PAID_ENDPOINT') return null;
+    throw e;
+  }
 };
 
 export const getQuote = async (ticker) => {
-  const data = await get('/quote', { symbol: ticker });
-  const arr  = toArray(data);
-  if (!arr.length) throw new Error(`No live quote available for "${ticker}".`);
-  const q = arr[0];
-  // Normalize field names — FMP sometimes uses different names
-  return {
-    ...q,
-    price:             q.price ?? q.currentPrice ?? 0,
-    changesPercentage: q.changesPercentage ?? q.changePercent ?? 0,
-    marketCap:         q.marketCap ?? q.mktCap ?? 0,
-    yearHigh:          q.yearHigh ?? q.fiftyTwoWeekHigh ?? null,
-    yearLow:           q.yearLow  ?? q.fiftyTwoWeekLow  ?? null,
-    pe:                q.pe ?? q.priceEarningsRatio ?? null,
-  };
+  try {
+    const data = await get('/quote', { symbol: ticker });
+    const arr  = toArray(data);
+    if (!arr.length) throw new Error(`No quote for "${ticker}".`);
+    const q = arr[0];
+    return {
+      ...q,
+      price:             q.price            ?? 0,
+      changesPercentage: q.changesPercentage ?? q.changePercent ?? 0,
+      marketCap:         q.marketCap         ?? q.mktCap ?? 0,
+      yearHigh:          q.yearHigh          ?? null,
+      yearLow:           q.yearLow           ?? null,
+      pe:                q.pe                ?? null,
+    };
+  } catch (e) {
+    if (e.message === 'PAID_ENDPOINT') return null;
+    throw e;
+  }
 };
 
 export const getIncomeStatement = async (ticker, limit = 5) => {
-  const data = await get('/income-statement', { symbol: ticker, limit, period: 'annual' });
-  const arr  = toArray(data);
-  if (!arr.length) throw new Error(`No income statement data for "${ticker}".`);
-  return arr;
+  try {
+    const data = await get('/income-statement', { symbol: ticker, limit, period: 'annual' });
+    const arr  = toArray(data);
+    return arr.length ? arr : null;
+  } catch { return null; }
 };
 
 export const getBalanceSheet = async (ticker, limit = 5) => {
-  const data = await get('/balance-sheet-statement', { symbol: ticker, limit, period: 'annual' });
-  const arr  = toArray(data);
-  if (!arr.length) throw new Error(`No balance sheet data for "${ticker}".`);
-  return arr;
+  try {
+    const data = await get('/balance-sheet-statement', { symbol: ticker, limit, period: 'annual' });
+    const arr  = toArray(data);
+    return arr.length ? arr : null;
+  } catch { return null; }
 };
 
 export const getCashFlow = async (ticker, limit = 5) => {
-  const data = await get('/cash-flow-statement', { symbol: ticker, limit, period: 'annual' });
-  const arr  = toArray(data);
-  if (!arr.length) throw new Error(`No cash flow data for "${ticker}".`);
-  return arr;
+  try {
+    const data = await get('/cash-flow-statement', { symbol: ticker, limit, period: 'annual' });
+    const arr  = toArray(data);
+    return arr.length ? arr : null;
+  } catch { return null; }
 };
 
 export const getFinancialRatios = async (ticker, limit = 5) => {
-  const data = await get('/ratios', { symbol: ticker, limit, period: 'annual' });
-  const arr  = toArray(data);
-  if (!arr.length) throw new Error(`No ratio data for "${ticker}".`);
-  return arr;
+  try {
+    const data = await get('/ratios', { symbol: ticker, limit, period: 'annual' });
+    const arr  = toArray(data);
+    return arr.length ? arr : null;
+  } catch { return null; }
 };
 
 export const getKeyMetrics = async (ticker, limit = 5) => {
-  const data = await get('/key-metrics', { symbol: ticker, limit, period: 'annual' });
-  const arr  = toArray(data);
-  if (!arr.length) throw new Error(`No key metrics for "${ticker}".`);
-  return arr;
+  try {
+    const data = await get('/key-metrics', { symbol: ticker, limit, period: 'annual' });
+    const arr  = toArray(data);
+    return arr.length ? arr : null;
+  } catch { return null; }
 };
 
 export const getDCFValue = async (ticker) => {
@@ -104,18 +121,19 @@ export const getRating = async (ticker) => {
 };
 
 export const getHistoricalPrice = async (ticker) => {
-  const data = await get('/historical-price-full', { symbol: ticker, serietype: 'line' });
-  const hist = data?.historical || (Array.isArray(data) ? data : null);
-  if (!hist) throw new Error(`No historical price data for "${ticker}".`);
-  return [...hist].reverse().slice(-365);
+  try {
+    const data = await get('/historical-price-eod/light', { symbol: ticker, limit: 365 });
+    const arr  = toArray(data);
+    if (!arr.length) return null;
+    return [...arr].reverse();
+  } catch { return null; }
 };
 
 export const getScreenerResults = async (strategy) => {
   try {
     const params = buildScreenerParams(strategy);
     const data   = await get('/company-screener', params);
-    const arr    = toArray(data);
-    return arr.slice(0, 20);
+    return toArray(data).slice(0, 20);
   } catch { return []; }
 };
 

@@ -111,24 +111,33 @@ export default function Screener() {
 
     try {
       const tickers = CURATED[sid]?.[mid] || [];
-      // Fetch quotes in batches of 5 to avoid overwhelming free tier
-      const allResults = [];
-      for (let i = 0; i < Math.min(tickers.length, 15); i += 5) {
-        const batch = tickers.slice(i, i + 5);
-        const settled = await Promise.allSettled(batch.map((t) => getQuote(t)));
-        settled.forEach((r, idx) => {
-          if (r.status === 'fulfilled' && r.value) {
-            allResults.push({ ...r.value, ticker: batch[idx] });
-          }
-        });
-      }
 
-      if (allResults.length === 0) {
-        setError('No quotes returned. Check your API key or try again.');
+      if (mid === 'india') {
+        // Use Twelve Data for Indian stocks
+        const { getBatchIndianQuotes } = await import('../api/twelvedata');
+        const data = await getBatchIndianQuotes(tickers, 12);
+        if (!data.length) {
+          setError('No Indian stock data returned. Check your Twelve Data API key in .env');
+        } else {
+          data.sort((a, b) => (b.volume || 0) - (a.volume || 0));
+          setResults(data);
+        }
       } else {
-        // Sort by market cap descending
-        allResults.sort((a, b) => (b.marketCap || 0) - (a.marketCap || 0));
-        setResults(allResults);
+        // Use FMP for US stocks
+        const allResults = [];
+        for (let i = 0; i < Math.min(tickers.length, 15); i += 5) {
+          const batch = tickers.slice(i, i + 5);
+          const settled = await Promise.allSettled(batch.map((t) => getQuote(t)));
+          settled.forEach((r) => {
+            if (r.status === 'fulfilled' && r.value) allResults.push(r.value);
+          });
+        }
+        if (!allResults.length) {
+          setError('No quotes returned. Check your FMP API key or try again.');
+        } else {
+          allResults.sort((a, b) => (b.marketCap || 0) - (a.marketCap || 0));
+          setResults(allResults);
+        }
       }
     } catch (e) {
       setError(e.message || 'Screener failed. Please try again.');

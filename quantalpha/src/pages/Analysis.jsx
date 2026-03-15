@@ -10,7 +10,7 @@ import {
   AlertTriangle, RefreshCw, Building2, Globe,
   DollarSign, Users, Activity
 } from 'lucide-react';
-import { useStock } from '../context/useStock';
+import { useStock } from '../context/StockContext';
 import Loader from '../components/Loader';
 import MetricCard from '../components/MetricCard';
 import ScoreGauge from '../components/ScoreGauge';
