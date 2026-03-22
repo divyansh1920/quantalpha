@@ -487,7 +487,7 @@ export default function Home() {
             Build By - Divyansh Jain (FORE School of Management, New Delhi)
           </p>
           <p className="text-slate-500 text-xs text-center">
-            For educational purposes only. Not financial advice. Data via Financial Modeling Prep.
+            Build By - Divyansh Jain (FORE School of Management, New Delhi)
           </p>
           <p className="text-slate-600 text-xs">© 2025 QuantAlpha</p>
         </div>
