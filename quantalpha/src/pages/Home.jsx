@@ -484,7 +484,7 @@ export default function Home() {
             <span className="text-slate-600 text-xs ml-2">🇺🇸 + 🇮🇳</span>
           </div>
           <p className="text-slate-500 text-xs text-center">
-            Build By - Divyansh Jain (FORE School of Management)
+            Build By - Divyansh Jain (FORE School of Management, New Delhi)
           </p>
           <p className="text-slate-500 text-xs text-center">
             For educational purposes only. Not financial advice. Data via Financial Modeling Prep.
